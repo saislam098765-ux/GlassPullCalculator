@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Glass Pull Calculator</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f2f2f2;font-family:Arial,sans-serif;color:#111}
+.wrap{max-width:560px;margin:auto;padding:12px}
+h2{text-align:center;margin:8px 0 14px}
+.card{background:#fff;border-radius:12px;padding:12px;margin-bottom:12px;box-shadow:0 2px 8px #0001}
+label{font-weight:bold;font-size:14px;display:block;margin:7px 0 4px}
+input,select{width:100%;padding:11px;border:1px solid #bbb;border-radius:8px;font-size:16px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mc{border:1px solid #ddd;border-radius:10px;padding:10px;margin:8px 0}
+.mc-title{font-weight:bold;margin-bottom:7px}
+button{width:100%;padding:13px;border:0;border-radius:9px;font-size:17px;font-weight:bold;margin-top:8px}
+.calc{background:#16803c;color:#fff}.copy{background:#1264a3;color:#fff}.clear{background:#777;color:#fff}
+.reportbox{white-space:pre-wrap;background:#fff;border:1px solid #ccc;border-radius:10px;padding:12px;font-size:14px;line-height:1.55;overflow-wrap:anywhere;margin-top:10px}
+#output{white-space:pre-wrap;background:#fff;border:1px solid #ccc;border-radius:10px;padding:12px;font-family:Arial,sans-serif;font-size:15px;line-height:1.55;overflow-wrap:anywhere}
+.small{font-size:12px;color:#666;text-align:center;margin:7px}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h2>🔥 Glass Pull / Draw Calculator</h2>
+
+<div class="card">
+<label>📆 Date</label><input id="date" type="date">
+<label>🕔 Time</label><input id="time" type="time" value="06:00">
+<div><label>⚫ Shift</label><select id="shift"><option>A</option><option>B</option><option>C</option></select></div>
+</div>
+
+<div class="card">
+<div class="small">Gob/Glass Weight = gram &nbsp; | &nbsp; Cutting Speed = cut/min</div>
+<div id="machines"></div>
+</div>
+
+<button class="calc" onclick="calculate()">= CALCULATE</button>
+<button class="copy" onclick="copyOutput()">📋 COPY FOR WHATSAPP</button>
+<button class="clear" onclick="resetAll()">↻ RESET</button>
+
+
+<button class="copy" onclick="saveHourlyOutput()">💾 SAVE HOURLY OUTPUT</button>
+
+<div class="card">
+<label>📊 8 Hour Output Tracker</label>
+<div id="hourlyList">No saved outputs yet.</div>
+<div style="margin-top:8px;font-weight:bold">Saved Reports: <span id="savedCount">0</span>/8</div>
+<div style="margin-top:8px;font-weight:bold">Average Total Output: <span id="avgOutput">0.000</span> Ton</div>
+<div style="margin-top:8px;font-weight:bold">Machine Weight Average (8 Hour)</div>
+<div id="machineAvgWeight" style="font-size:14px;line-height:1.6"></div>
+<button class="calc" onclick="calculateAverage()">📈 CALCULATE AVERAGE</button>
+<button class="clear" onclick="resetShiftData()">🗑 RESET 8 HOUR DATA</button>
+</div>
+
+<div class="card">
+<label>📄 Final Output</label>
+<div id="output">Calculate চাপলে আপনার নির্দিষ্ট WhatsApp format এখানে আসবে।</div>
+</div>
+
+<div class="card">
+<label>🟢 8 ঘণ্টার Machine-wise Pull হিসাব</label>
+<div><label>Shift নির্বাচন</label><select id="pullShift"><option>A</option><option>B</option><option>C</option></select></div>
+<div class="grid">
+ <div><label>🕕 Shift Start Time</label><input id="pullStartTime" type="time" value="06:00"></div>
+ <div><label>🕑 Shift End Time</label><input id="pullEndTime" type="time" value="14:00"></div>
+</div>
+<div class="small">৮ ঘণ্টার Tracker-এ সেভ করা রিপোর্ট থেকে সব Running M/C ও K-Code একসাথে যোগ করতে নিচের বাটন চাপুন। একই মেশিনে K-Code পরিবর্তন হলে আলাদা লাইন হবে; ওজন ও চলার মিনিট অটোমেটিক হিসাব হবে। প্রয়োজন হলে Cutting Speed যাচাই/সংশোধন করুন।</div>
+<div id="pullSegments"></div>
+<button class="calc" onclick="loadAllRunningMachines()">🟢 Load All Running Machines</button>
+<button class="copy" onclick="addPullSegment()">＋ Add K-Code / Cutting Segment</button>
+<button class="calc" onclick="calculatePullSummary()">🟢 Calculate 8 Hour Pull</button>
+<button class="copy" onclick="copyPullSummary()">📋 Copy 8 Hour WhatsApp Report</button>
+<div id="pullOutput" class="reportbox">এখানে ৮ ঘণ্টার মেশিনভিত্তিক রিপোর্ট দেখা যাবে।</div>
+</div>
+
+<div class="card">
+<label>🟡 Draning / 🟠 Gob Cutting Draning হিসাব</label>
+<div><label>Shift নির্বাচন</label><select id="drainShift"><option>A</option><option>B</option><option>C</option></select></div>
+<div class="small">প্রতিটি ঘটনা আলাদা করে যোগ করুন। Start/End time থেকে মিনিট অটোমেটিক হিসাব হবে। Draning-এর জন্য ৫ সেকেন্ডের ওজন (g); Gob Cutting Draning-এর জন্য ওজন (g) ও cutting speed (cpm) দিন।</div>
+<div id="drainEvents"></div>
+<button class="copy" onclick="addDrainEvent()">＋ Add Draning Event</button>
+<button class="calc" onclick="calculateDrainReport()">🧮 Calculate Draning Report</button>
+<button class="copy" onclick="copyDrainReport()">📋 Copy Draning WhatsApp Report</button>
+<div id="drainOutput" class="reportbox">এখানে Draning / Gob Cutting Draning রিপোর্ট দেখা যাবে।</div>
+</div>
+</div>
+
+<script>
+const defaultData=[
+ [422,15,"K-112"],[196,25,"K-206"],[143,27,"K-204"],[0,0,""],[0,0,""],
+ [282,24,"Gob Cutting Draning"],[552,14,"K-303"]
+];
+
+const box=document.getElementById("machines");
+for(let i=1;i<=7;i++){
+  const d=defaultData[i-1];
+  box.insertAdjacentHTML("beforeend",`
+  <div class="mc">
+    <div class="mc-title">${i}️⃣ M/C</div>
+    <label>Status</label>
+    <select id="status${i}" onchange="toggle(${i});saveMachineState(${i})">
+      <option value="Running">🟢 Running</option>
+      <option value="Stopped" ${i==4||i==5?"selected":""}>🔴 Stopped</option>
+      <option value="Draning">🟡 Draning</option>
+      <option value="Gob Cutting Draning">🟠 Gob Cutting Draning</option>
+    </select>
+    <div id="fields${i}" class="${i==4||i==5?"hidden":""}">
+      <div class="grid">
+        <div><label id="wlabel${i}">Gob/Glass Weight (g)</label><input id="w${i}" type="number" step="0.001" value="${d[0]||""}" placeholder="e.g. 422"></div>
+        <div id="cwrap${i}"><label>Cutting Speed (cpm)</label><input id="c${i}" type="number" step="0.001" value="${d[1]||""}" placeholder="e.g. 15"></div>
+      </div>
+      <div id="t5hint${i}" class="small hidden">Draning হিসাব: ৫ সেকেন্ডের ওজন থেকে ২৪ ঘণ্টার Ton হিসাব হবে।</div>
+      <label>K-code / Remark</label>
+      <input id="r${i}" value="${d[2]}" placeholder="K- (code লিখুন)">
+    </div>
+  </div>`);
+  if((i!==4 && i!==5) && !String(d[2]||"").trim()) document.getElementById("r"+i).value="K-";
+}
+function toggle(i){
+ const st=document.getElementById("status"+i).value;
+ document.getElementById("fields"+i).classList.toggle("hidden",st==="Stopped");
+ const isDraning=st==="Draning";
+ document.getElementById("cwrap"+i).classList.toggle("hidden",isDraning);
+ document.getElementById("t5hint"+i).classList.toggle("hidden",!isDraning);
+ document.getElementById("wlabel"+i).textContent=isDraning?"Weight in 5 Seconds (g)":"Gob/Glass Weight (g)";
+ const remark=document.getElementById("r"+i);
+ if(isDraning){ remark.value="Draning"; }
+ else if(st==="Gob Cutting Draning"){ remark.value="Gob Cutting Draning"; }
+ else if(st==="Running" && (!remark.value.trim() || /draning/i.test(remark.value.trim()))){ remark.value="K-"; }
+}
+function pad(n){return String(n).padStart(2,"0")}
+function formatDate(v){
+ if(!v)return "";
+ let [y,m,d]=v.split("-");
+ return `${d}/${m}/${y}`;
+}
+function formatTime(v){
+ if(!v)return "";
+ let [h,m]=v.split(":"); h=+h;
+ let ap=h>=12?"PM":"AM"; let hh=h%12||12;
+ return `${hh}:${m} ${ap}`;
+}
+function calculate(){
+ const date=formatDate(document.getElementById("date").value);
+ const time=formatTime(document.getElementById("time").value);
+ const shift=document.getElementById("shift").value;
+ let lines=[];
+ let total=0;
+ lines.push(`📆 Date: ${date}`);
+ lines.push(`🕔 Time: ${time}`);
+ lines.push(`⚫ Shift: "${shift}"`);
+ lines.push(`══════════════════`);
+ lines.push(`⚙️ Machine Outlay draw🔥`);
+ lines.push(`══════════════════`);
+ for(let i=1;i<=7;i++){
+   const st=document.getElementById("status"+i).value;
+   if(st==="Stopped"){
+     lines.push(`${i}️⃣🔴M/C➤ Stopped ❌`);
+   }else{
+      let icon="🟢";
+      let remarkOverride="";
+      if(st==="Draning"){ icon="🟡"; remarkOverride=" *(Draning)*"; }
+      if(st==="Gob Cutting Draning"){ icon="🟠"; remarkOverride=" *(Gob Cutting Draning)*"; }
+
+     const w=parseFloat(document.getElementById("w"+i).value)||0;
+     const c=parseFloat(document.getElementById("c"+i).value)||0;
+     const r=document.getElementById("r"+i).value.trim();
+     const ton = st==="Draning" ? (w*86400/5/1000000) : (w*c*60*24/1000000);
+     total+=ton;
+     let remark=r? (r.toLowerCase().includes("gob")||r.toLowerCase().includes("draning") ? ` *(${r})*` : ` [${r}]`) : "";
+     if(st==="Draning"){
+       lines.push(`${i}️⃣${icon}M/C➤ (W${w}×T5s)= ${ton.toFixed(3)} Ton. *(Draning)*`);
+     }else{
+       lines.push(`${i}️⃣${icon}M/C➤ (W${w}×C${c})= ${ton.toFixed(3)} Ton.${remarkOverride || remark}`);
+     }
+   }
+ }
+ lines.push(`══════════════════`);
+ lines.push(`✅ TOTAL OUTPUT = ${total.toFixed(3)} Ton.`);
+ document.getElementById("output").textContent=lines.join("\n");
+}
+async function copyOutput(){
+ calculate();
+ const text=document.getElementById("output").textContent;
+ try{
+   await navigator.clipboard.writeText(text);
+   alert("✅ Copied! এখন WhatsApp-এ Paste করুন।");
+ }catch(e){
+   const ta=document.createElement("textarea");ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand("copy");ta.remove();
+   alert("✅ Copied! এখন WhatsApp-এ Paste করুন।");
+ }
+}
+function resetAll(){
+ document.getElementById("date").valueAsDate=new Date();
+ document.getElementById("time").value="06:00";
+ document.getElementById("pullStartTime").value="06:00";
+ document.getElementById("pullEndTime").value="14:00";
+ document.getElementById("shift").value="A";
+ for(let i=1;i<=7;i++){
+  document.getElementById("status"+i).value=(i==4||i==5)?"Stopped":"Running";
+  document.getElementById("w"+i).value=defaultData[i-1][0]||"";
+  document.getElementById("c"+i).value=defaultData[i-1][1]||"";
+  document.getElementById("r"+i).value=defaultData[i-1][2]||"";
+  toggle(i);
+ }
+ calculate();
+}
+
+function saveMachineState(i){
+  localStorage.setItem("machineStatus"+i, document.getElementById("status"+i).value);
+}
+
+function loadMachineState(){
+  for(let i=1;i<=7;i++){
+    const saved=localStorage.getItem("machineStatus"+i);
+    if(saved){
+      document.getElementById("status"+i).value=saved;
+      toggle(i);
+    }
+  }
+}
+
+
+function autoSave(){
+ const data={};
+ for(let i=1;i<=7;i++){
+   data["status"+i]=document.getElementById("status"+i).value;
+   data["w"+i]=document.getElementById("w"+i).value;
+   data["c"+i]=document.getElementById("c"+i).value;
+   data["r"+i]=document.getElementById("r"+i).value;
+ }
+ data.date=document.getElementById("date").value;
+ data.time=document.getElementById("time").value;
+ data.pullStartTime=document.getElementById("pullStartTime").value;
+ data.pullEndTime=document.getElementById("pullEndTime").value;
+ data.pullSegments=collectPullSegments();
+ data.drainEvents=collectDrainEvents();
+ data.shift=document.getElementById("shift").value;
+ data.pullShift=document.getElementById("pullShift").value;
+ data.drainShift=document.getElementById("drainShift").value;
+ localStorage.setItem("glass_full_data",JSON.stringify(data));
+}
+
+function loadAutoSave(){
+ const data=JSON.parse(localStorage.getItem("glass_full_data")||"null");
+ if(!data){ restoreExtraInputs(null); return; }
+ document.getElementById("date").value=data.date||"";
+ document.getElementById("time").value=data.time||"06:00";
+ document.getElementById("pullStartTime").value=data.pullStartTime||data.time||"06:00";
+ document.getElementById("pullEndTime").value=data.pullEndTime||data.endTime||"14:00";
+ document.getElementById("shift").value=data.shift||"A";
+ document.getElementById("pullShift").value=data.pullShift||data.shift||"A";
+ document.getElementById("drainShift").value=data.drainShift||data.shift||"A";
+
+ for(let i=1;i<=7;i++){
+   if(data["status"+i]) document.getElementById("status"+i).value=data["status"+i];
+   if(data["w"+i]!==undefined) document.getElementById("w"+i).value=data["w"+i];
+   if(data["c"+i]!==undefined) document.getElementById("c"+i).value=data["c"+i];
+   if(data["r"+i]!==undefined) document.getElementById("r"+i).value=data["r"+i];
+   toggle(i);
+ }
+ restoreExtraInputs(data);
+}
+
+// 8-hour pull summary: each segment is a distinct K-code / weight / cutting run.
+let pullSegmentCounter=0, drainEventCounter=0;
+function addPullSegment(data={}){
+ const id=++pullSegmentCounter, host=document.getElementById('pullSegments');
+ const mc=data.mc||'1', code=data.code||'', weight=data.weight??'', cutting=data.cutting??'', minutes=data.minutes??'';
+ host.insertAdjacentHTML('beforeend',`<div class="mc pull-segment" data-id="${id}">
+ <div class="mc-title">Pull segment ${id}</div><div class="grid">
+ <div><label>M/C</label><select class="ps-mc" onchange="autoFillPullWeight(this)">${[1,2,3,4,5,6,7].map(n=>`<option ${String(n)===String(mc)?'selected':''}>${n}</option>`).join('')}</select></div>
+ <div><label>K-Code</label><input class="ps-code" value="${esc(code)}" placeholder="e.g. K-505" oninput="autoFillPullWeight(this)"></div>
+ <div><label>Average Weight (g)</label><input class="ps-weight" type="number" step="0.001" value="${weight}" placeholder="e.g. 246"></div>
+ <div><label>Average Cutting (cpm)</label><input class="ps-cutting" type="number" step="0.001" value="${cutting}" placeholder="e.g. 26"></div>
+ <div><label>Run time (minutes)</label><input class="ps-minutes" type="number" min="0" step="1" value="${minutes}" placeholder="e.g. 270"></div>
+ <div><button class="clear" type="button" onclick="this.closest('.pull-segment').remove();autoSave()">Remove line</button></div>
+ </div></div>`);
+}
+function collectPullSegments(){return [...document.querySelectorAll('.pull-segment')].map(el=>({mc:el.querySelector('.ps-mc').value,code:el.querySelector('.ps-code').value,weight:el.querySelector('.ps-weight').value,cutting:el.querySelector('.ps-cutting').value,minutes:el.querySelector('.ps-minutes').value}));}
+function averageWeightForCode(mc, code){
+ const target=String(code||'').trim().toLowerCase(); if(!target) return null;
+ const arr=getHourlyOutputs(); let sum=0,count=0;
+ arr.forEach(report=>{
+  const saved=report.machines && report.machines[Number(mc)-1];
+  if(saved && String(saved.code||'').trim().toLowerCase()===target){sum+=Number(saved.weight)||0;count++;}
+ });
+ return count ? sum/count : null;
+}
+function autoFillPullWeight(el){
+ const row=el.closest('.pull-segment'); if(!row) return;
+ const avg=averageWeightForCode(row.querySelector('.ps-mc').value,row.querySelector('.ps-code').value);
+ if(avg!==null) row.querySelector('.ps-weight').value=avg.toFixed(2);
+ autoSave();
+}
+function autoFillAllPullWeights(){document.querySelectorAll('.pull-segment').forEach(row=>{const avg=averageWeightForCode(row.querySelector('.ps-mc').value,row.querySelector('.ps-code').value);if(avg!==null)row.querySelector('.ps-weight').value=avg.toFixed(2);});}
+function loadAllRunningMachines(){
+ const reports=getHourlyOutputs();
+ if(!reports.length){alert('আগে প্রতি ঘণ্টার রিপোর্ট SAVE HOURLY OUTPUT দিয়ে সেভ করুন।');return;}
+ const groups=new Map();
+ reports.forEach(report=>{
+  (report.machines||[]).forEach((saved,index)=>{
+   if(!saved || saved.status!=='Running') return;
+   const code=String(saved.code||'').trim();
+   if(/draning/i.test(code)) return;
+   const key=(index+1)+'|'+code.toLowerCase();
+   if(!groups.has(key)) groups.set(key,{mc:String(index+1),code,weights:[],cuttings:[],minutes:0});
+   const g=groups.get(key); const w=Number(saved.weight)||0;
+   if(w>0)g.weights.push(w);
+   const c=Number(saved.cutting)||0;
+   if(c>0)g.cuttings.push(c);
+   g.minutes+=60;
+  });
+ });
+ if(!groups.size){alert('সেভ করা রিপোর্টে কোনো Running M/C ও K-Code পাওয়া যায়নি।');return;}
+ const currentCuts={};
+ for(let i=1;i<=7;i++) currentCuts[String(i)]=Number(document.getElementById('c'+i)?.value)||0;
+ document.getElementById('pullSegments').innerHTML='';pullSegmentCounter=0;
+ [...groups.values()].forEach(g=>{
+  const avgWeight=g.weights.length?g.weights.reduce((a,b)=>a+b,0)/g.weights.length:0;
+  const avgCut=g.cuttings.length?g.cuttings.reduce((a,b)=>a+b,0)/g.cuttings.length:currentCuts[g.mc];
+  addPullSegment({mc:g.mc,code:g.code,weight:avgWeight?avgWeight.toFixed(2):'',cutting:avgCut||'',minutes:Math.min(g.minutes,480)});
+ });
+ autoSave();
+ alert(`${groups.size}টি M/C ও K-Code segment যোগ হয়েছে। Cutting Speed ও সময় যাচাই করুন।`);
+}
+function esc(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function calculatePullSummary(){
+ autoFillAllPullWeights();
+ const date=formatDate(document.getElementById('date').value), shift=document.getElementById('pullShift').value;
+ const start=compactTime(document.getElementById('pullStartTime').value), end=compactTime(document.getElementById('pullEndTime').value);
+ const segments=collectPullSegments(); let total=0, lines=[`📆 Date: ${date}`,`🕔 Time:(${start} to ${end})`,`⚫ Shift: "${shift}"`,`══════════════════`,`⚙️ Total 8 hours Machine wise weight & cutting Avg pull`,`══════════════════`];
+ const minutesByMachine={};
+ segments.forEach(x=>{const mc=Number(x.mc),w=Number(x.weight)||0,c=Number(x.cutting)||0,m=Number(x.minutes)||0;minutesByMachine[mc]=(minutesByMachine[mc]||0)+m;if(!w||!c||!m)return;const ton=w*c*m/1000000;total+=ton;const code=x.code.trim();lines.push(`${mc}️⃣🟢M/C➤(W${w}×C${c})= ${ton.toFixed(3)} Ton.(${m} min)${code?` [${code}]`:''}`)});
+ lines.push('══════════════════');
+ Object.keys(minutesByMachine).sort((a,b)=>Number(a)-Number(b)).forEach(mc=>{const mins=minutesByMachine[mc];lines.push(`⏱️ M/C-${mc} run time = ${mins} minutes${mins!==480?' ⚠️ (8 ঘণ্টার জন্য 480 মিনিট হওয়া উচিত)':''}`);});
+ lines.push(`✅ Total 8 Hours Output= ${total.toFixed(3)} Ton.`);
+ document.getElementById('pullOutput').textContent=lines.join('\n'); autoSave(); return lines.join('\n');
+}
+async function copyPullSummary(){const t=calculatePullSummary();await copyText(t,'8 ঘণ্টার রিপোর্ট কপি হয়েছে।');}
+
+// Separate drain event records. Draning = 5-second weight extrapolated over event duration.
+function addDrainEvent(data={}){
+ const id=++drainEventCounter, host=document.getElementById('drainEvents');
+ const mc=data.mc||'2', type=data.type||'Draning', start=data.start||'06:00', end=data.end||'14:00', weight=data.weight??'', cutting=data.cutting??'';
+ host.insertAdjacentHTML('beforeend',`<div class="mc drain-event" data-id="${id}"><div class="mc-title">Draning event ${id}</div>
+ <div class="grid"><div><label>M/C</label><select class="de-mc">${[1,2,3,4,5,6,7].map(n=>`<option ${String(n)===String(mc)?'selected':''}>${n}</option>`).join('')}</select></div>
+ <div><label>Type</label><select class="de-type" onchange="toggleDrainEvent(this)"><option ${type==='Draning'?'selected':''}>Draning</option><option ${type==='Gob Cutting Draning'?'selected':''}>Gob Cutting Draning</option></select></div>
+ <div><label>Start time</label><input class="de-start" type="time" value="${start}"></div><div><label>End time</label><input class="de-end" type="time" value="${end}"></div>
+ <div><label class="de-wlabel">${type==='Draning'?'Weight in 5 seconds (g)':'Gob weight (g)'}</label><input class="de-weight" type="number" step="0.001" value="${weight}" placeholder="Weight in grams"></div>
+ <div class="de-cut-wrap" style="${type==='Draning'?'display:none':''}"><label>Cutting speed (cpm)</label><input class="de-cutting" type="number" step="0.001" value="${cutting}" placeholder="e.g. 26"></div></div>
+ <button class="clear" type="button" onclick="this.closest('.drain-event').remove();autoSave()">Remove event</button></div>`);
+}
+function toggleDrainEvent(sel){const el=sel.closest('.drain-event'),isD=sel.value==='Draning';el.querySelector('.de-wlabel').textContent=isD?'Weight in 5 seconds (g)':'Gob weight (g)';el.querySelector('.de-cut-wrap').style.display=isD?'none':'';autoSave();}
+function collectDrainEvents(){return [...document.querySelectorAll('.drain-event')].map(el=>({mc:el.querySelector('.de-mc').value,type:el.querySelector('.de-type').value,start:el.querySelector('.de-start').value,end:el.querySelector('.de-end').value,weight:el.querySelector('.de-weight').value,cutting:el.querySelector('.de-cutting').value}));}
+function compactTime(v){if(!v)return '';let [h,m]=v.split(':').map(Number);return `${String(h%12||12).padStart(2,'0')}:${String(m).padStart(2,'0')}${h>=12?'pm':'am'}`;}
+function durationMinutes(a,b){if(!a||!b)return 0;let [ah,am]=a.split(':').map(Number),[bh,bm]=b.split(':').map(Number);let d=bh*60+bm-(ah*60+am);if(d<0)d+=1440;return d;}
+function calculateDrainReport(){
+ const date=formatDate(document.getElementById('date').value),shift=document.getElementById('drainShift').value,events=collectDrainEvents();let totalMin=0,totalTon=0;
+ const lines=[`Date : ${date}`,`⚫ Shift : "${shift}"`,''];
+ events.forEach(e=>{const m=durationMinutes(e.start,e.end),w=Number(e.weight)||0,c=Number(e.cutting)||0;if(!m||!w)return;const ton=e.type==='Draning'?(w*60*m/5/1000000):(w*c*m/1000000);totalMin+=m;totalTon+=ton;const start=compactTime(e.start),end=compactTime(e.end);const eventIcon=e.type==='Draning'?'🟡':'🟠';lines.push(`➤${eventIcon}${String(e.mc).padStart(2,'0')} No. M/C ${e.type==='Draning'?'Draning':'gob cutting draning'} at (${start} to ${end})-total ${m} minutes. Weight = ${ton.toFixed(3)} Ton.`,'');});
+ lines.push(`★Total Draning Time= ${Math.floor(totalMin/60)} Hours ${totalMin%60} Minutes.`,`★Total Draning Weight= ${totalTon.toFixed(3)} Ton.`);
+ if(!events.some(e=>durationMinutes(e.start,e.end)>0 && Number(e.weight)>0)) lines.push('⚠️ কোনো event-এর সময় ও ওজন দেওয়া হয়নি।');
+ document.getElementById('drainOutput').textContent=lines.join('\n');autoSave();return lines.join('\n');
+}
+async function copyDrainReport(){const t=calculateDrainReport();await copyText(t,'Draning রিপোর্ট কপি হয়েছে।');}
+async function copyText(t,msg){try{await navigator.clipboard.writeText(t);alert(msg)}catch(e){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();alert(msg)}}
+function restoreExtraInputs(data){
+ document.getElementById('pullSegments').innerHTML='';pullSegmentCounter=0;
+ (data?.pullSegments||[{mc:'1',code:'',weight:'',cutting:'',minutes:'480'}]).forEach(x=>addPullSegment(x));
+ document.getElementById('drainEvents').innerHTML='';drainEventCounter=0;
+ (data?.drainEvents||[]).forEach(x=>addDrainEvent(x));
+}
+
+// প্রতিটি ইনপুট/পরিবর্তন সঙ্গে সঙ্গে সেভ হবে, পেজ বন্ধ/ব্যাকগ্রাউন্ডে গেলেও শেষ ডাটা সেভ করা হবে।
+document.addEventListener("input",autoSave);
+document.addEventListener("change",autoSave);
+window.addEventListener("pagehide",autoSave);
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden") autoSave(); });
+
+
+function getHourlyOutputs(){
+ return JSON.parse(localStorage.getItem("hourlyOutputs")||"[]");
+}
+
+function renderHourlyOutputs(){
+ const arr=getHourlyOutputs();
+ const count=document.getElementById("savedCount");
+ const list=document.getElementById("hourlyList");
+ if(count) count.textContent=arr.length;
+
+ if(!list) return;
+
+ if(arr.length===0){
+   list.innerHTML="No saved outputs yet.";
+   const avg=document.getElementById("avgOutput");
+   if(avg) avg.textContent="0.000";
+   return;
+ }
+
+ list.innerHTML=arr.map((v,i)=>`${i+1}. ${Number(v.total).toFixed(3)} Ton`).join("<br>");
+}
+
+function saveHourlyOutput(){
+ calculate();
+ const txt=document.getElementById("output").textContent;
+ const m=txt.match(/TOTAL OUTPUT = ([0-9.]+)/);
+ if(!m) return;
+
+ let arr=getHourlyOutputs();
+ if(arr.length>=8){
+   alert("Already saved 8 hourly outputs.");
+   return;
+ }
+
+ const weights = [];
+ const machines = [];
+ for(let i=1;i<=7;i++){
+    const status=document.getElementById("status"+i).value;
+    const weight=parseFloat(document.getElementById("w"+i).value)||0;
+    const rawCode=document.getElementById("r"+i).value.trim();
+    const code=(status==="Running" && rawCode && !/draning/i.test(rawCode)) ? rawCode : "";
+    weights.push(weight);
+    const cutting=parseFloat(document.getElementById("c"+i).value)||0;
+    machines.push({weight, code, status, cutting});
+ }
+ arr.push({
+    total: parseFloat(m[1]),
+    weights: weights,
+    machines: machines
+ });
+ localStorage.setItem("hourlyOutputs", JSON.stringify(arr));
+ renderHourlyOutputs();
+ calculateAverage();
+}
+
+function calculateAverage(){
+
+  const arr=getHourlyOutputs();
+
+  const avgField=document.getElementById("avgOutput");
+  const machineDiv=document.getElementById("machineAvgWeight");
+
+  if(!avgField) return;
+
+  if(arr.length===0){
+    avgField.textContent="0.000";
+    if(machineDiv) machineDiv.innerHTML="";
+    return;
+  }
+
+  const totalAvg = arr.reduce((a,b)=>a+b.total,0)/arr.length;
+  avgField.textContent=totalAvg.toFixed(3);
+
+  let htmlAvg="";
+
+  for(let mc=0;mc<7;mc++){
+      // Backward compatibility with older saved hourly records.
+      let sum=0, count=0;
+      const byCode={};
+      arr.forEach(report=>{
+          const saved=report.machines && report.machines[mc];
+          const weight=Number(saved ? saved.weight : (report.weights && report.weights[mc]) || 0);
+          sum += weight;
+          count++;
+          if(saved && saved.code){
+              if(!byCode[saved.code]) byCode[saved.code]={sum:0,count:0};
+              byCode[saved.code].sum += weight;
+              byCode[saved.code].count++;
+          }
+      });
+      const avg=count ? sum/count : 0;
+      htmlAvg += `<div style="margin:6px 0 2px"><b>M/C-${mc+1} Average Weight = ${avg.toFixed(2)} g</b></div>`;
+      Object.keys(byCode).sort().forEach(code=>{
+          const item=byCode[code];
+          const codeAvg=item.sum/item.count;
+          htmlAvg += `<div style="padding-left:16px">↳ ${code} Weight Average = ${codeAvg.toFixed(2)} g (${item.count} report${item.count===1?"":"s"})</div>`;
+      });
+  }
+
+  if(machineDiv) machineDiv.innerHTML=htmlAvg;
+}
+
+function resetShiftData(){
+ localStorage.removeItem("hourlyOutputs");
+ renderHourlyOutputs();
+ calculateAverage();
+}
+
+// Load saved form state first; if there is no saved state, initialise defaults.
+loadAutoSave();
+if(!document.getElementById('pullSegments').children.length) restoreExtraInputs(null);
+if(!document.getElementById('date').value){document.getElementById('date').valueAsDate=new Date();}
+if(!document.getElementById('time').value) document.getElementById('time').value='06:00';
+if(!document.getElementById('pullStartTime').value) document.getElementById('pullStartTime').value='06:00';
+if(!document.getElementById('pullEndTime').value) document.getElementById('pullEndTime').value='14:00';
+if(!document.getElementById('pullShift').value) document.getElementById('pullShift').value=document.getElementById('shift').value||'A';
+if(!document.getElementById('drainShift').value) document.getElementById('drainShift').value=document.getElementById('shift').value||'A';
+renderHourlyOutputs();
+calculateAverage();
+calculate();
+autoSave();
+</script>
+</body>
+</html>
